@@ -1,7 +1,9 @@
 package com.example.demo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import com.example.demo.service.UserAuthenticationService;
+import com.example.demo.web.domain.LoginParameters;
 import com.example.demo.web.domain.SignUpParameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -33,6 +36,9 @@ class DemoApplicationTests {
 
 	@Autowired
 	private SignUpParameters signUpParams;
+	
+	@Autowired
+	private LoginParameters loginParams;
 	
 	@Autowired
 	private ObjectMapper objectMapper;
@@ -68,6 +74,7 @@ class DemoApplicationTests {
 		signUpParams.setEmail(CUSTOMER_EMAIL);
 		signUpParams.setPassword("");
 		accessSignUpPage(signUpParams, status().isBadRequest());
+		
 	}
 
 	private void accessSignUpPage(SignUpParameters inputParams, ResultMatcher resultMatcher) throws Exception {
@@ -77,7 +84,41 @@ class DemoApplicationTests {
 		mvc.perform(get("/user/signup")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(jsonString))
-				.andDo(print())
-			;//.andExpect(resultMatcher);
+				//.andDo(print())
+			.andExpect(resultMatcher);
+	}
+	
+	@Test
+	public void accessRestrictedPageWithoutLogin() throws Exception {
+		mvc.perform(get("/restricted"))
+			.andExpect(status().isForbidden());
+	}
+	
+	@Test
+	public void loginAndAccessToRestrictedPage() throws Exception{
+		
+		accessSignUpPage(signUpParams, status().isOk());
+		
+		loginParams.setEmail(CUSTOMER_EMAIL);
+		loginParams.setPassword(CUSTOMER_PASSWORD);
+		
+		String jsonInput = objectMapper.writeValueAsString(loginParams);
+		
+		String jwt = mvc.perform(post("/user/login")
+								.contentType(MediaType.APPLICATION_JSON)
+								.accept(MediaType.TEXT_PLAIN)
+								.content(jsonInput))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+			
+		assertNotNull(jwt);
+		
+		String bearer = "bearer: " + jwt;
+		
+		mvc.perform(get("/restricted")
+						.header("Authorization", bearer))
+					.andDo(print())
+					.andExpect(status().isOk());
 	}
 }

@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
+import com.example.demo.web.authentication.JwtProcessor;
+import com.example.demo.web.authentication.JwtProcessorImpl;
 import com.example.demo.web.controller.ResponseMap;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -16,8 +18,13 @@ public class UtilityContainer {
 	}
 	
 	@Scope("prototype")
-	@Bean()
+	@Bean
 	public ResponseMap responseMap(){
 		return new ResponseMap();
+	}
+	
+	@Bean
+	public JwtProcessor jwtProcessor() {
+		return new JwtProcessorImpl();
 	}
 }
